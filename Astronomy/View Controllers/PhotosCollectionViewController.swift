@@ -28,22 +28,27 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
     
     @IBAction func goToPreviousSol(_ sender: Any?) {
         guard let solDescriptions = roverInfo?.solDescriptions else { return }
-        guard let sol = solDescription?.sol, sol > 0 else {
-            solDescription = solDescriptions.first
+        guard let description = self.solDescription,
+              let index = roverInfo?.solDescriptions.firstIndex(of: description),
+              description.sol > 0 else {
+            solDescription = solDescriptions.last
             return
         }
+       
         
-        solDescription = solDescriptions[sol-1]
+        solDescription = solDescriptions[index - 1]
     }
     
     @IBAction func goToNextSol(_ sender: Any?) {
         guard let solDescriptions = roverInfo?.solDescriptions else { return }
-        guard let sol = solDescription?.sol, sol < solDescriptions.count else {
-            solDescription = solDescriptions.last
+        guard let description = self.solDescription,
+              let index = roverInfo?.solDescriptions.firstIndex(of: description),
+              description.sol < solDescriptions.count else {
+            solDescription = solDescriptions.first
             return
         }
         
-        solDescription = solDescriptions[sol+1]
+        solDescription = solDescriptions[index+1]
     }
     
     // UICollectionViewDataSource/Delegate
@@ -93,7 +98,9 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         if segue.identifier == "ShowDetail" {
             guard let indexPath = collectionView.indexPathsForSelectedItems?.first else { return }
             let detailVC = segue.destination as! PhotoDetailViewController
-            detailVC.photo = photoReferences[indexPath.item]
+            let reference = photoReferences[indexPath.item]
+            detailVC.photo = reference
+            detailVC.photoData = cache.value(for: reference.id)
         }
     }
     
@@ -184,7 +191,6 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         didSet {
             if let rover = roverInfo,
                 let sol = solDescription?.sol {
-                photoReferences = []
                 client.fetchPhotos(from: rover, onSol: sol) { (photoRefs, error) in
                     if let e = error { NSLog("Error fetching photos for \(rover.name) on sol \(sol): \(e)"); return }
                     self.photoReferences = photoRefs ?? []
